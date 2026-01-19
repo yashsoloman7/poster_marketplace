@@ -3,6 +3,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, make_response, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
@@ -28,6 +29,18 @@ app = Flask(__name__)
 
 # SECURITY: Move to environment variables in production
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# ============================================================================
+# EMAIL CONFIGURATION
+# ============================================================================
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'postermarketplace@gmail.com'
+app.config['MAIL_PASSWORD'] = 'opgf gmpy ucby csot'
+app.config['MAIL_DEFAULT_SENDER'] = 'postermarketplace@gmail.com'
+
+mail = Mail(app)  # Initialize Flask-Mail
 
 # Dual database configuration
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -423,6 +436,9 @@ def register():
         db.session.add(user)
         db.session.commit()
         
+        # Send welcome email to new user
+        send_welcome_email(user)
+        
         flash('Registration successful! Please log in.', 'success')
         return redirect(url_for('login'))
     
@@ -522,16 +538,18 @@ def admin_dashboard():
     total_users = User.query.count()
     total_orders = Order.query.count()
     total_revenue = db.session.query(db.func.sum(Order.total_amount)).scalar() or 0
-    total_posters = Poster.query.count()
+    total_posters = Poster.query.filter_by(is_active=True).count()  # Count only active posters in real-time
     
     recent_orders = Order.query.order_by(Order.created_at.desc()).limit(10).all()
+    recent_posters = Poster.query.order_by(Poster.created_at.desc()).limit(10).all()
     
     return render_template('admin_dashboard.html', 
                          total_users=total_users,
                          total_orders=total_orders,
                          total_revenue=total_revenue,
                          total_posters=total_posters,
-                         recent_orders=recent_orders)
+                         recent_orders=recent_orders,
+                         recent_posters=recent_posters)
 
 @app.route('/admin/users')
 @login_required
@@ -911,18 +929,86 @@ def order_confirmation(order_id):
         flash('Unauthorized.', 'error')
         return redirect(url_for('index'))
     
-    return render_template('order_confirmation.html', order=order)
+    return render_template('order_confirmation.html', order=order, now=datetime.utcnow())
 
 @app.route('/my-orders')
 @login_required
 def my_orders():
     """View user's orders"""
     orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
-    return render_template('my_orders.html', orders=orders)
+    return render_template('my_orders.html', orders=orders, now=datetime.utcnow())
+
+@app.route('/cancel-order/<int:order_id>', methods=['POST'])
+@login_required
+def cancel_order(order_id):
+    """Cancel an order within 24 hours of placement"""
+    order = Order.query.get_or_404(order_id)
+    
+    if order.user_id != current_user.id:
+        flash('Unauthorized.', 'error')
+        return redirect(url_for('my_orders'))
+    
+    # Only allow cancellation if order status is Pending
+    if order.status != 'Pending':
+        flash('This order cannot be cancelled as it has already been processed.', 'error')
+        return redirect(url_for('my_orders'))
+    
+    # Check if order is within 24 hours
+    time_since_order = datetime.utcnow() - order.created_at
+    if time_since_order > timedelta(hours=24):
+        flash('Orders can only be cancelled within 24 hours of placement. This order is no longer cancellable.', 'error')
+        return redirect(url_for('my_orders'))
+    
+    # Update order status to Cancelled
+    order.status = 'Cancelled'
+    db.session.commit()
+    
+    flash(f'Order #{order.order_number} has been cancelled successfully.', 'success')
+    return redirect(url_for('my_orders'))
+
 @app.route('/about')
 def about():
     """About Us Page"""
     return render_template('about.html')
+
+# ============================================================================
+# EMAIL FUNCTIONS
+# ============================================================================
+
+def send_welcome_email(user):
+    """Send welcome email to new registered user"""
+    try:
+        msg = Message('Welcome to Poster Marketplace! 🎨', recipients=[user.email])
+        msg.body = f"""Hi {user.username},
+
+Welcome to Poster Marketplace! We are thrilled to have you on board.
+
+Explore our collection of Anime and Gaming posters, or start selling your own art today.
+
+If you have any questions, feel free to reply to this email.
+
+Best regards,
+The Poster Marketplace Team
+"""
+        # You can also use HTML for a better looking email:
+        msg.html = f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+            <h2 style="color: #6c5ce7;">Welcome, {user.username}! 🎉</h2>
+            <p>Thank you for joining <strong>Poster Marketplace</strong>. We are thrilled to have you here.</p>
+            <p>Here is what you can do next:</p>
+            <ul>
+                <li>browse our <a href="http://127.0.0.1:8080/">latest collection</a></li>
+                <li><a href="http://127.0.0.1:8080/add-poster">Upload your own art</a></li>
+            </ul>
+            <p>Happy Collecting!</p>
+            <p><em>The Poster Marketplace Team</em></p>
+        </div>
+        """
+        mail.send(msg)
+        print(f"[INFO] Welcome email sent to {user.email}")
+    except Exception as e:
+        print(f"[ERROR] Failed to send email: {str(e)}")
+
 # ============================================================================
 # UTILITY ROUTES
 # ============================================================================

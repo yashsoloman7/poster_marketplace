@@ -8,19 +8,29 @@
     <h1 class="mb-4">My Orders</h1>
     {% if orders %}
         {% for order in orders %}
+        {% set time_diff = (now - order.created_at).total_seconds() / 3600 %}
+        {% set can_cancel = order.status == 'Pending' and time_diff < 24 %}
         <div class="card mb-3 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><strong>Order #{{ order.id }}</strong></span>
-                <span class="text-muted">Placed on {{ order.created_at.strftime('%Y-%m-%d') }}</span>
+                <span class="text-muted">Placed on {{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-8">
-                        <h5 class="card-title">Status: <span class="badge badge-info">{{ order.status }}</span></h5>
+                        <h5 class="card-title">Status: <span class="badge" style="background-color: {% if order.status == 'Pending' %}#3b82f6{% elif order.status == 'Cancelled' %}#ef4444{% else %}#10b981{% endif %}; color: white;">{{ order.status }}</span></h5>
                         <p class="card-text">Total: <strong>₹{{ "%.2f"|format(order.total_amount) }}</strong></p>
+                        {% if order.status == 'Pending' and time_diff >= 24 %}
+                        <p style="color: #ef4444; font-size: 0.9rem; margin: 0.5rem 0 0 0;">⏱️ Cancellation window expired (24 hours passed)</p>
+                        {% endif %}
                     </div>
-                    <div class="col-md-4 text-right">
+                    <div class="col-md-4 text-right" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
                         <a href="{{ url_for('order_confirmation', order_id=order.id) }}" class="btn btn-primary">View Details</a>
+                        {% if can_cancel %}
+                        <form method="POST" action="{{ url_for('cancel_order', order_id=order.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this order?');">Cancel Order</button>
+                        </form>
+                        {% endif %}
                     </div>
                 </div>
             </div>

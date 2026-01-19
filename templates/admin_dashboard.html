@@ -73,17 +73,15 @@
         <div class="col-md-4">
             <div class="dropdown h-100">
                 <button class="btn-hub btn-hub-warning dropdown-toggle border-0 w-100" type="button" data-bs-toggle="dropdown">
-                    <div class="hub-icon"><i class="fas fa-file-export"></i></div>
+                    <div class="hub-icon"><i class="fas fa-chart-bar"></i></div>
                     <div class="hub-text text-start">
-                        <span class="hub-title">Export Reports</span>
-                        <span class="hub-desc">Download system CSVs</span>
+                        <span class="hub-title">Management</span>
+                        <span class="hub-desc">Manage system data</span>
                     </div>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-3 mt-2 rounded-4">
-                    <li><a class="dropdown-item py-2 px-3 rounded-3" href="{{ url_for('export_users') }}"><i class="fas fa-user-circle me-2 text-primary"></i> Export Users</a></li>
-                    <li><a class="dropdown-item py-2 px-3 rounded-3" href="{{ url_for('export_orders') }}"><i class="fas fa-list-alt me-2 text-success"></i> Export Orders</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item py-2 px-3 rounded-3 text-danger fw-bold" href="{{ url_for('export_all') }}"><i class="fas fa-archive me-2"></i> Full System Backup</a></li>
+                    <li><a class="dropdown-item py-2 px-3 rounded-3" href="{{ url_for('admin_users') }}"><i class="fas fa-users me-2 text-primary"></i> Manage Users</a></li>
+                    <li><a class="dropdown-item py-2 px-3 rounded-3" href="{{ url_for('admin_orders') }}"><i class="fas fa-list-alt me-2 text-success"></i> Manage Orders</a></li>
                 </ul>
             </div>
         </div>
@@ -147,6 +145,238 @@
                 </div>
             </div>
             {% endfor %}
+        </div>
+    </div>
+
+    <!-- Recently Added Posters Section -->
+    <div class="mb-4 mt-5">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; position: relative;">
+            <div>
+                <h2 style="font-size: 1.75rem; font-weight: 800; color: #2d3436; margin: 0;">🎨 Recently Added Posters</h2>
+                <p style="color: #636e72; margin-top: 0.5rem; margin-bottom: 0;">Latest poster uploads from your sellers</p>
+            </div>
+            <a href="{{ url_for('admin_users') }}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.75rem 1.5rem; border-radius: 20px; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: all 0.3s; display: flex; align-items: center; gap: 0.5rem;">
+                View All <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem;">
+            {% for poster in recent_posters %}
+            <div class="poster-card-modern" style="
+                background: white;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                cursor: pointer;
+            " onmouseover="this.style.transform='translateY(-10px)'; this.style.boxShadow='0 20px 40px rgba(102, 126, 234, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.08)'">
+                
+                <!-- Image Section with Overlay -->
+                <div style="position: relative; overflow: hidden; height: 220px;">
+                    {% if poster.image_filename %}
+                        <img src="{{ url_for('serve_upload', filename=poster.image_filename) }}" alt="{{ poster.title }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s;">
+                    {% else %}
+                        <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 80px;">📌</div>
+                    {% endif %}
+                    
+                    <!-- Hover Overlay -->
+                    <div style="
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 1rem;
+                        opacity: 0;
+                        transition: opacity 0.4s;
+                        cursor: pointer;
+                    " class="poster-overlay" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
+                        <button style="
+                            background: white;
+                            color: #667eea;
+                            border: none;
+                            padding: 0.75rem 1.5rem;
+                            border-radius: 8px;
+                            font-weight: 700;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                            font-size: 0.95rem;
+                        " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            👁️ View Details
+                        </button>
+                        <a href="#" style="
+                            background: rgba(255,255,255,0.2);
+                            color: white;
+                            padding: 0.65rem 1.25rem;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            text-decoration: none;
+                            font-size: 0.9rem;
+                            border: 1px solid rgba(255,255,255,0.3);
+                            transition: all 0.3s;
+                        " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                            ✏️ Manage
+                        </a>
+                    </div>
+
+                    <!-- Category Badge -->
+                    <div style="
+                        position: absolute;
+                        top: 12px;
+                        right: 12px;
+                        background: #667eea;
+                        color: white;
+                        padding: 0.5rem 1rem;
+                        border-radius: 20px;
+                        font-size: 0.75rem;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                    ">{{ poster.category }}</div>
+                </div>
+                
+                <!-- Info Section -->
+                <div style="padding: 1.5rem;">
+                    <!-- Title -->
+                    <h5 style="
+                        font-weight: 800;
+                        color: #2d3436;
+                        margin: 0 0 1rem 0;
+                        line-height: 1.4;
+                        font-size: 1.05rem;
+                    ">{{ poster.title[:45] }}{% if poster.title|length > 45 %}...{% endif %}</h5>
+                    
+                    <!-- Stats Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                        <div style="background: #f8f9fa; padding: 0.75rem; border-radius: 8px; border-left: 3px solid #667eea;">
+                            <span style="display: block; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #636e72; margin-bottom: 0.35rem;">Price</span>
+                            <span style="display: block; font-size: 1.2rem; font-weight: 800; color: #667eea;">₹{{ "%.0f"|format(poster.price) }}</span>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 0.75rem; border-radius: 8px; border-left: 3px solid #10b981;">
+                            <span style="display: block; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #636e72; margin-bottom: 0.35rem;">Views</span>
+                            <span style="display: block; font-size: 1.2rem; font-weight: 800; color: #10b981;">{{ poster.views }}</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: #fef3c7; padding: 0.75rem; border-radius: 8px; border-left: 3px solid #f59e0b;">
+                            <span style="display: block; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #92400e; margin-bottom: 0.35rem;">Status</span>
+                            <span style="display: block; font-size: 0.9rem; font-weight: 700; color: #92400e;">{% if poster.is_active %}✅ Active{% else %}⏸️ Inactive{% endif %}</span>
+                        </div>
+                        <div style="background: #f0fdf4; padding: 0.75rem; border-radius: 8px; border-left: 3px solid #10b981;">
+                            <span style="display: block; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #166534; margin-bottom: 0.35rem;">Added</span>
+                            <span style="display: block; font-size: 0.9rem; font-weight: 700; color: #166534;">{{ poster.created_at.strftime('%d %b') }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+                        <a href="#" style="
+                            flex: 1;
+                            text-align: center;
+                            padding: 0.7rem;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            border-radius: 8px;
+                            text-decoration: none;
+                            font-weight: 700;
+                            font-size: 0.85rem;
+                            transition: all 0.3s;
+                        " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            📊 Analytics
+                        </a>
+                        <a href="#" style="
+                            flex: 1;
+                            text-align: center;
+                            padding: 0.7rem;
+                            background: #f5f7fa;
+                            color: #667eea;
+                            border-radius: 8px;
+                            text-decoration: none;
+                            font-weight: 700;
+                            font-size: 0.85rem;
+                            transition: all 0.3s;
+                            border: 2px solid #667eea;
+                        " onmouseover="this.style.background='#667eea'; this.style.color='white'" onmouseout="this.style.background='#f5f7fa'; this.style.color='#667eea'">
+                            🗑️ Remove
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 2rem;">
+                <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.3;">🎨</div>
+                <p style="color: #636e72; font-size: 1.1rem; font-weight: 600;">No recent posters found</p>
+                <p style="color: #999; margin-top: 0.5rem;">Start promoting your posters to see them here!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div style="margin-top: 4rem; padding: 2rem; background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%); border-radius: 16px; border: 2px solid rgba(102, 126, 234, 0.1);">
+        <h3 style="font-size: 1.4rem; font-weight: 800; color: #2d3436; margin-bottom: 1.5rem;">⚡ Quick Management</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+            <a href="{{ url_for('admin_users') }}" style="
+                background: white;
+                padding: 1.5rem;
+                border-radius: 12px;
+                text-decoration: none;
+                border: 2px solid #3b82f6;
+                transition: all 0.3s;
+                text-align: center;
+            " onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 25px rgba(59, 130, 246, 0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">👥</div>
+                <h4 style="color: #3b82f6; font-weight: 800; margin: 0.5rem 0;">Manage Users</h4>
+                <p style="color: #636e72; font-size: 0.9rem; margin: 0.5rem 0 0 0;">View & control user accounts</p>
+            </a>
+            
+            <a href="{{ url_for('admin_orders') }}" style="
+                background: white;
+                padding: 1.5rem;
+                border-radius: 12px;
+                text-decoration: none;
+                border: 2px solid #10b981;
+                transition: all 0.3s;
+                text-align: center;
+            " onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 25px rgba(16, 185, 129, 0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📦</div>
+                <h4 style="color: #10b981; font-weight: 800; margin: 0.5rem 0;">View Activity</h4>
+                <p style="color: #636e72; font-size: 0.9rem; margin: 0.5rem 0 0 0;">Track all order activities</p>
+            </a>
+            
+            <a href="{{ url_for('admin_users') }}" style="
+                background: white;
+                padding: 1.5rem;
+                border-radius: 12px;
+                text-decoration: none;
+                border: 2px solid #f59e0b;
+                transition: all 0.3s;
+                text-align: center;
+            " onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 25px rgba(245, 158, 11, 0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🎮</div>
+                <h4 style="color: #f59e0b; font-weight: 800; margin: 0.5rem 0;">Manage Sellers</h4>
+                <p style="color: #636e72; font-size: 0.9rem; margin: 0.5rem 0 0 0;">Review seller profiles</p>
+            </a>
+
+            <a href="{{ url_for('admin_dashboard') }}" style="
+                background: white;
+                padding: 1.5rem;
+                border-radius: 12px;
+                text-decoration: none;
+                border: 2px solid #8b5cf6;
+                transition: all 0.3s;
+                text-align: center;
+            " onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 25px rgba(139, 92, 246, 0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📊</div>
+                <h4 style="color: #8b5cf6; font-weight: 800; margin: 0.5rem 0;">System Stats</h4>
+                <p style="color: #636e72; font-size: 0.9rem; margin: 0.5rem 0 0 0;">View detailed analytics</p>
+            </a>
         </div>
     </div>
 </div>

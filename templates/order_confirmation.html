@@ -4,6 +4,8 @@
 {% block title %}Order Confirmation{% endblock %}
 
 {% block content %}
+{% set time_diff = (now - order.created_at).total_seconds() / 3600 %}
+{% set can_cancel = order.status == 'Pending' and time_diff < 24 %}
 <section class="order-confirmation-section">
     <div class="container">
         <div class="confirmation-content">
@@ -69,6 +71,16 @@
             <div class="confirmation-actions">
                 <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">Continue Shopping</a>
                 <a href="{{ url_for('my_orders') }}" class="btn btn-secondary btn-lg">View Orders</a>
+                {% if can_cancel %}
+                <form method="POST" action="{{ url_for('cancel_order', order_id=order.id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-lg" onclick="return confirm('Are you sure you want to cancel this order?');">Cancel Order</button>
+                </form>
+                {% elif order.status == 'Pending' and time_diff >= 24 %}
+                <div style="text-align: center; color: #ef4444; padding: 1rem; background: #fee; border-radius: 8px; margin-top: 1rem;">
+                    <strong>⏱️ Cancellation window expired</strong><br>
+                    <small>Orders can only be cancelled within 24 hours of placement.</small>
+                </div>
+                {% endif %}
             </div>
             
             <div class="confirmation-footer">

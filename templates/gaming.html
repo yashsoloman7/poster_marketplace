@@ -3,7 +3,59 @@
 {% block title %}Gaming Collection - Poster Marketplace{% endblock %}
 
 {% block content %}
-<style>
+<style>    /* ========== SEARCH BAR STYLES ========== */
+    .page-search-bar {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin-top: 2rem;
+    }
+
+    .page-search-bar input {
+        padding: 0.6rem 1rem;
+        border: 1px solid #555;
+        border-radius: 20px;
+        font-size: 0.95rem;
+        width: 300px;
+        background: #1e1e1e;
+        color: white;
+        transition: all 0.3s;
+    }
+
+    .page-search-bar input::placeholder {
+        color: #888;
+    }
+
+    .page-search-bar input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+    }
+
+    .page-search-bar button {
+        padding: 0.6rem 1.2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 20px;
+        color: white;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .page-search-bar button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    @media (max-width: 768px) {
+        .page-search-bar {
+            flex-wrap: wrap;
+        }
+        .page-search-bar input {
+            width: 100%;
+        }
+    }
     /* ========== GAMING THEME CSS ========== */
     
     /* Dark Background for the whole page area */
@@ -179,6 +231,10 @@
         <div class="container">
             <h1>Epic Gaming Collection</h1>
             <p>Level up your setup with premium gaming wall art</p>
+            <form class="page-search-bar" method="GET" action="{{ url_for('search') }}" style="justify-content: center;">
+                <input type="text" name="q" placeholder="Search gaming posters..." required>
+                <button type="submit">🔍 Search</button>
+            </form>
         </div>
     </section>
 
@@ -224,38 +280,6 @@
                 <a href="{{ url_for('index') }}" class="btn-cart" style="max-width: 200px; margin: 20px auto;">Return Home</a>
             </div>
             {% endif %}
-        </div>
-    </section>
-
-    <section class="featured-section container">
-        <h2 class="section-title">Featured Gear</h2>
-        <div class="featured-grid">
-            {% for poster in posters[:8] %}
-                <div class="poster-card">
-                    <div class="poster-image">
-                        {% if poster.image_filename %}
-                            <img src="{{ url_for('serve_upload', filename=poster.image_filename) }}" alt="{{ poster.title }}">
-                        {% else %}
-                            🎮
-                        {% endif %}
-                    </div>
-                    <div class="poster-info">
-                        <span class="poster-category">{{ poster.category }}</span>
-                        <h3 class="poster-title">{{ poster.title }}</h3>
-                        <p class="poster-price">₹{{ poster.price }}</p>
-                        <div class="poster-actions">
-                            {% if current_user.is_authenticated %}
-                                <form method="POST" action="{{ url_for('add_to_cart', poster_id=poster.id) }}">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <button type="submit">Add to Cart</button>
-                                </form>
-                            {% else %}
-                                <a href="{{ url_for('login') }}" class="btn-primary">Login to Buy</a>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
         </div>
     </section>
 </div>
