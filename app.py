@@ -1,4 +1,3 @@
-
 #Poster_Marketplace application develop by YASH SOLOAMN
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, make_response, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -33,10 +32,12 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-i
 base_dir = os.path.dirname(os.path.abspath(__file__))
 accounts_db_path = os.path.join(base_dir, 'accounts.db')
 orders_db_path = os.path.join(base_dir, 'orders.db')
+sellers_db_path = os.path.join(base_dir, 'sellers.db')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{accounts_db_path}'
 app.config['SQLALCHEMY_BINDS'] = {
-    'orders': f'sqlite:///{orders_db_path}'
+    'orders': f'sqlite:///{orders_db_path}',
+    'sellers': f'sqlite:///{sellers_db_path}'
 }
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -116,9 +117,6 @@ class User(UserMixin, db.Model, TimestampMixin):
     # Relationships
     roles = db.relationship('Role', secondary=user_roles, backref=db.backref('users', lazy='dynamic'))
     
-    # Note: posters, cart_items, and orders relationships removed due to cross-database architecture
-    # They are stored in separate 'orders' database and accessed by user_id only
-    
     def set_password(self, password):
         """Hash and set password"""
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
@@ -167,7 +165,7 @@ class User(UserMixin, db.Model, TimestampMixin):
     
     def __repr__(self):
         return f'<User {self.username}>'
-    # 1. ADD THIS NEW CLASS
+
 class OrderItem(db.Model):
     __bind_key__ = 'orders'
     id = db.Column(db.Integer, primary_key=True)
@@ -212,7 +210,6 @@ class CartItem(db.Model, TimestampMixin):
     def __repr__(self):
         return f'<CartItem user={self.user_id} poster={self.poster_id}>'
 
-# --- 1. FIND THE 'Order' CLASS AND REPLACE IT WITH THIS ---
 class Order(db.Model, TimestampMixin):
     """Order model with shipping details and payment info"""
     __bind_key__ = 'orders'
@@ -230,7 +227,7 @@ class Order(db.Model, TimestampMixin):
     state = db.Column(db.String(50), nullable=False)
     pincode = db.Column(db.String(10), nullable=False)
     
-    # NEW: Payment Method
+    # Payment Method
     payment_method = db.Column(db.String(50), default='COD', nullable=False)
     
     # User reference
@@ -243,74 +240,85 @@ class Order(db.Model, TimestampMixin):
     def __repr__(self):
         return f'<Order {self.order_number}>'
 
+# ============================================================================
+# SELLER DATABASE MODELS - sellers.db
+# ============================================================================
 
-@app.route('/checkout', methods=['GET', 'POST'])
-@login_required
-def checkout():
-    """Checkout page"""
-    cart_items = CartItem.query.filter_by(user_id=current_user.id).all()
+class SellerStats(db.Model, TimestampMixin):
+    """Seller statistics and analytics"""
+    __bind_key__ = 'sellers'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=False, unique=True, index=True)
     
-    if not cart_items:
-        flash('Your cart is empty!', 'warning')
-        return redirect(url_for('view_cart'))
+    # Sales metrics
+    total_posters_listed = db.Column(db.Integer, default=0, nullable=False)
+    total_posters_sold = db.Column(db.Integer, default=0, nullable=False)
+    total_revenue = db.Column(db.Float, default=0.0, nullable=False)
     
-    if request.method == 'POST':
-        # If form is submitted from checkout page, proceed to place order
-        return redirect(url_for('place_order'))
+    # Performance metrics
+    total_views = db.Column(db.Integer, default=0, nullable=False)
+    avg_rating = db.Column(db.Float, default=0.0)
     
-    total = sum(item.poster.price * item.quantity for item in cart_items)
-    return render_template('checkout.html', cart_items=cart_items, total=total, user=current_user)
-
-@app.route('/place_order', methods=['GET', 'POST'])
-@login_required
-def place_order():
-    cart_items = CartItem.query.filter_by(user_id=current_user.id).all()
+    # Status
+    is_active = db.Column(db.Boolean, default=True)
+    seller_since = db.Column(db.DateTime, default=datetime.utcnow)
     
-    if not cart_items:
-        flash('Your cart is empty!')
-        return redirect(url_for('view_cart'))
+    def __repr__(self):
+        return f'<SellerStats user={self.user_id} sold={self.total_posters_sold}>'
 
-    # 1. Calculate Total
-    total_amount = sum(item.poster.price * item.quantity for item in cart_items)
-
-    # 2. Generate unique order number
-    import uuid
-    order_number = f"ORD-{uuid.uuid4().hex[:8].upper()}"
+class PosterAnalytics(db.Model, TimestampMixin):
+    """Per-poster analytics and performance tracking"""
+    __bind_key__ = 'sellers'
+    id = db.Column(db.Integer, primary_key=True)
+    poster_id = db.Column(db.Integer, nullable=False, unique=True, index=True)
+    user_id = db.Column(db.Integer, nullable=False, index=True)
     
-    # 3. Create the Order with shipping details from form
-    new_order = Order(
-        user_id=current_user.id,
-        order_number=order_number,
-        total_amount=total_amount,
-        status='Pending',
-        full_name=request.form.get('full_name', getattr(current_user, 'full_name', None) or ''),
-        phone=request.form.get('phone', getattr(current_user, 'phone', None) or ''),
-        email=request.form.get('email', current_user.email or ''),
-        address=request.form.get('address', ''),
-        city=request.form.get('city', ''),
-        state=request.form.get('state', ''),
-        pincode=request.form.get('pincode', ''),
-        payment_method=request.form.get('payment_method', 'COD')
-    )
-    db.session.add(new_order)
-    db.session.flush()  # This generates the new_order.id before committing
-
-    # 4. SAVE THE ITEMS
-    for item in cart_items:
-        order_item = OrderItem(
-            order_id=new_order.id,
-            poster_id=item.poster.id,
-            quantity=item.quantity
-        )
-        db.session.add(order_item)
-
-    # 5. Clear the User's Cart
-    for item in cart_items:
-        db.session.delete(item)
-
-    db.session.commit()
+    # Poster info (duplicated for analytics)
+    title = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50), nullable=False, index=True)
+    price = db.Column(db.Float, nullable=False)
     
-    return redirect(url_for('order_confirmation', order_id=new_order.id))   
+    # Performance metrics
+    total_views = db.Column(db.Integer, default=0)
+    total_clicks = db.Column(db.Integer, default=0)
+    total_sold = db.Column(db.Integer, default=0)
+    total_revenue = db.Column(db.Float, default=0.0)
+    
+    # Conversion metrics
+    conversion_rate = db.Column(db.Float, default=0.0)
+    
+    # Status
+    is_active = db.Column(db.Boolean, default=True)
+    listed_date = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<PosterAnalytics poster={self.poster_id} sold={self.total_sold}>'
+
+class SellerSaleHistory(db.Model, TimestampMixin):
+    """Detailed sales history for sellers"""
+    __bind_key__ = 'sellers'
+    id = db.Column(db.Integer, primary_key=True)
+    seller_id = db.Column(db.Integer, nullable=False, index=True)
+    order_id = db.Column(db.Integer, nullable=False, index=True)
+    poster_id = db.Column(db.Integer, nullable=False, index=True)
+    
+    # Sale details
+    title = db.Column(db.String(100), nullable=False)
+    quantity_sold = db.Column(db.Integer, default=1)
+    unit_price = db.Column(db.Float, nullable=False)
+    total_amount = db.Column(db.Float, nullable=False)
+    
+    # Buyer info
+    buyer_name = db.Column(db.String(100))
+    buyer_email = db.Column(db.String(120))
+    buyer_city = db.Column(db.String(50))
+    
+    # Status
+    order_status = db.Column(db.String(50), default='Completed')
+    sale_date = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<SellerSaleHistory seller={self.seller_id} order={self.order_id}>'
 
 # ============================================================================
 # DECORATORS FOR ROLE-BASED ACCESS CONTROL
@@ -540,262 +548,6 @@ def admin_orders():
     orders = Order.query.order_by(Order.created_at.desc()).all()
     return render_template('admin_orders.html', orders=orders)
 
-@app.route('/export/users')
-@login_required
-@role_required('Admin')
-def export_users():
-    """Export users to CSV from accounts.db"""
-    users = User.query.all()
-    
-    si = io.StringIO()
-    cw = csv.writer(si)
-    
-    cw.writerow(['ID', 'Username', 'Email', 'Full Name', 'Phone', 'Roles', 'Active', 'Created At'])
-    
-    for user in users:
-        roles = ', '.join(user.get_roles())
-        cw.writerow([
-            user.id, 
-            user.username, 
-            user.email, 
-            user.full_name or '', 
-            user.phone or '',
-            roles, 
-            'Yes' if user.is_active else 'No',
-            user.created_at.strftime('%Y-%m-%d %H:%M:%S') if user.created_at else ''
-        ])
-    
-    output = make_response(si.getvalue())
-    output.headers['Content-Disposition'] = 'attachment; filename=accounts_users.csv'
-    output.headers['Content-type'] = 'text/csv'
-    
-    return output
-
-@app.route('/export/posters')
-@login_required
-@role_required('Admin')
-def export_posters():
-    """Export posters catalog to CSV from orders.db"""
-    posters = Poster.query.all()
-    
-    si = io.StringIO()
-    cw = csv.writer(si)
-    
-    cw.writerow(['ID', 'Title', 'Description', 'Price', 'Category', 'Seller ID', 'Views', 'Active', 'Image', 'Created At'])
-    
-    for poster in posters:
-        cw.writerow([
-            poster.id,
-            poster.title,
-            poster.description,
-            poster.price,
-            poster.category,
-            poster.user_id,
-            poster.views,
-            'Yes' if poster.is_active else 'No',
-            poster.image_filename,
-            poster.created_at.strftime('%Y-%m-%d %H:%M:%S') if poster.created_at else ''
-        ])
-    
-    output = make_response(si.getvalue())
-    output.headers['Content-Disposition'] = 'attachment; filename=orders_posters.csv'
-    output.headers['Content-type'] = 'text/csv'
-    
-    return output
-
-@app.route('/export/orders')
-@login_required
-@role_required('Admin')
-def export_orders():
-    """Export orders to CSV from orders.db"""
-    orders = Order.query.all()
-    
-    si = io.StringIO()
-    cw = csv.writer(si)
-    
-    cw.writerow(['Order ID', 'Order Number', 'Customer ID', 'Total Amount', 'Status', 'Full Name', 'Email', 'Phone', 'Address', 'City', 'State', 'Pincode', 'Created At'])
-    
-    for order in orders:
-        cw.writerow([
-            order.id,
-            order.order_number,
-            order.user_id,
-            order.total_amount,
-            order.status,
-            order.full_name,
-            order.email,
-            order.phone,
-            order.address,
-            order.city,
-            order.state,
-            order.pincode,
-            order.created_at.strftime('%Y-%m-%d %H:%M:%S') if order.created_at else ''
-        ])
-    
-    output = make_response(si.getvalue())
-    output.headers['Content-Disposition'] = 'attachment; filename=orders_list.csv'
-    output.headers['Content-type'] = 'text/csv'
-    
-    return output
-
-@app.route('/export/order-items')
-@login_required
-@role_required('Admin')
-def export_order_items():
-    """Export order items to CSV from orders.db"""
-    order_items = OrderItem.query.all()
-    
-    si = io.StringIO()
-    cw = csv.writer(si)
-    
-    cw.writerow(['Item ID', 'Order ID', 'Poster ID', 'Poster Title', 'Quantity', 'Price', 'Subtotal'])
-    
-    for item in order_items:
-        # Get poster title (accessing from orders.db)
-        poster = Poster.query.get(item.poster_id)
-        poster_title = poster.title if poster else 'Unknown'
-        
-        cw.writerow([
-            item.id,
-            item.order_id,
-            item.poster_id,
-            poster_title,
-            item.quantity,
-            item.price,
-            item.quantity * item.price
-        ])
-    
-    output = make_response(si.getvalue())
-    output.headers['Content-Disposition'] = 'attachment; filename=orders_items.csv'
-    output.headers['Content-type'] = 'text/csv'
-    
-    return output
-
-@app.route('/export/cart')
-@login_required
-@role_required('Admin')
-def export_cart():
-    """Export shopping cart items to CSV from orders.db"""
-    cart_items = CartItem.query.all()
-    
-    si = io.StringIO()
-    cw = csv.writer(si)
-    
-    cw.writerow(['Cart Item ID', 'Customer ID', 'Poster ID', 'Poster Title', 'Quantity', 'Unit Price', 'Total'])
-    
-    for item in cart_items:
-        # Get poster details
-        poster = Poster.query.get(item.poster_id)
-        poster_title = poster.title if poster else 'Unknown'
-        poster_price = poster.price if poster else 0
-        
-        cw.writerow([
-            item.id,
-            item.user_id,
-            item.poster_id,
-            poster_title,
-            item.quantity,
-            poster_price,
-            item.quantity * poster_price
-        ])
-    
-    output = make_response(si.getvalue())
-    output.headers['Content-Disposition'] = 'attachment; filename=orders_cart.csv'
-    output.headers['Content-type'] = 'text/csv'
-    
-    return output
-
-@app.route('/export/all')
-@login_required
-@role_required('Admin')
-def export_all():
-    """Export all data (accounts and orders) as ZIP with multiple CSV files"""
-    import zipfile
-    from io import BytesIO
-    
-    zip_buffer = BytesIO()
-    
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        # Export Users
-        users = User.query.all()
-        users_csv = io.StringIO()
-        cw = csv.writer(users_csv)
-        cw.writerow(['ID', 'Username', 'Email', 'Full Name', 'Phone', 'Roles', 'Active', 'Created At'])
-        for user in users:
-            roles = ', '.join(user.get_roles())
-            cw.writerow([
-                user.id, user.username, user.email, user.full_name or '', 
-                user.phone or '', roles, 'Yes' if user.is_active else 'No',
-                user.created_at.strftime('%Y-%m-%d %H:%M:%S') if user.created_at else ''
-            ])
-        zip_file.writestr('accounts_users.csv', users_csv.getvalue())
-        
-        # Export Posters
-        posters = Poster.query.all()
-        posters_csv = io.StringIO()
-        cw = csv.writer(posters_csv)
-        cw.writerow(['ID', 'Title', 'Description', 'Price', 'Category', 'Seller ID', 'Views', 'Active', 'Image', 'Created At'])
-        for poster in posters:
-            cw.writerow([
-                poster.id, poster.title, poster.description, poster.price, 
-                poster.category, poster.user_id, poster.views,
-                'Yes' if poster.is_active else 'No', poster.image_filename,
-                poster.created_at.strftime('%Y-%m-%d %H:%M:%S') if poster.created_at else ''
-            ])
-        zip_file.writestr('orders_posters.csv', posters_csv.getvalue())
-        
-        # Export Orders
-        orders = Order.query.all()
-        orders_csv = io.StringIO()
-        cw = csv.writer(orders_csv)
-        cw.writerow(['Order ID', 'Order Number', 'Customer ID', 'Total Amount', 'Status', 'Full Name', 'Email', 'Phone', 'Address', 'City', 'State', 'Pincode', 'Created At'])
-        for order in orders:
-            cw.writerow([
-                order.id, order.order_number, order.user_id, order.total_amount, 
-                order.status, order.full_name, order.email, order.phone,
-                order.address, order.city, order.state, order.pincode,
-                order.created_at.strftime('%Y-%m-%d %H:%M:%S') if order.created_at else ''
-            ])
-        zip_file.writestr('orders_list.csv', orders_csv.getvalue())
-        
-        # Export Order Items
-        order_items = OrderItem.query.all()
-        items_csv = io.StringIO()
-        cw = csv.writer(items_csv)
-        cw.writerow(['Item ID', 'Order ID', 'Poster ID', 'Poster Title', 'Quantity', 'Price', 'Subtotal'])
-        for item in order_items:
-            poster = Poster.query.get(item.poster_id)
-            poster_title = poster.title if poster else 'Unknown'
-            cw.writerow([
-                item.id, item.order_id, item.poster_id, poster_title,
-                item.quantity, item.price, item.quantity * item.price
-            ])
-        zip_file.writestr('orders_items.csv', items_csv.getvalue())
-        
-        # Export Cart Items
-        cart_items = CartItem.query.all()
-        cart_csv = io.StringIO()
-        cw = csv.writer(cart_csv)
-        cw.writerow(['Cart Item ID', 'Customer ID', 'Poster ID', 'Poster Title', 'Quantity', 'Unit Price', 'Total'])
-        for item in cart_items:
-            poster = Poster.query.get(item.poster_id)
-            poster_title = poster.title if poster else 'Unknown'
-            poster_price = poster.price if poster else 0
-            cw.writerow([
-                item.id, item.user_id, item.poster_id, poster_title,
-                item.quantity, poster_price, item.quantity * poster_price
-            ])
-        zip_file.writestr('orders_cart.csv', cart_csv.getvalue())
-    
-    zip_buffer.seek(0)
-    
-    output = make_response(zip_buffer.getvalue())
-    output.headers['Content-Disposition'] = 'attachment; filename=marketplace_export_all.zip'
-    output.headers['Content-type'] = 'application/zip'
-    
-    return output
-
-
 # ============================================================================
 # ROUTES - POSTER MANAGEMENT
 # ============================================================================
@@ -803,7 +555,7 @@ def export_all():
 @app.route('/add-poster', methods=['GET', 'POST'])
 @login_required
 def add_poster():
-    """Add new poster"""
+    """Add new poster with Listing Fee logic"""
     if request.method == 'POST':
         if 'image' not in request.files:
             flash('No file selected.', 'error')
@@ -849,21 +601,23 @@ def add_poster():
                     flash('Invalid image file.', 'error')
                     return redirect(request.url)
             
-            # Create poster
+            # --- MODIFIED: Create poster as INACTIVE first ---
             poster = Poster(
                 title=title,
                 description=description,
                 price=price,
                 category=category,
                 image_filename=filename,
-                owner=current_user
+                user_id=current_user.id,
+                is_active=False  # <--- HIDDEN UNTIL PAID
             )
             
             db.session.add(poster)
             db.session.commit()
             
-            flash('Poster added successfully!', 'success')
-            return redirect(url_for('dashboard'))
+            # --- MODIFIED: Redirect to Payment Page ---
+            flash('Poster created! Please pay the listing fee to publish it.', 'info')
+            return redirect(url_for('pay_listing_fee', poster_id=poster.id))
         
         except Exception as e:
             db.session.rollback()
@@ -871,6 +625,37 @@ def add_poster():
             return redirect(request.url)
     
     return render_template('add_poster.html')
+
+@app.route('/pay-listing-fee/<int:poster_id>', methods=['GET', 'POST'])
+@login_required
+def pay_listing_fee(poster_id):
+    """Simulate Payment of 10% Listing Fee"""
+    poster = Poster.query.get_or_404(poster_id)
+    
+    # Security: Ensure only the owner can pay
+    if poster.user_id != current_user.id:
+        flash('Unauthorized access.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # If already active, skip payment
+    if poster.is_active:
+        flash('This poster is already active.', 'info')
+        return redirect(url_for('dashboard'))
+    
+    # Calculate 10% Fee
+    listing_fee = round(poster.price * 0.10, 2)
+    
+    if request.method == 'POST':
+        # --- SIMULATION: In a real app, Stripe/Razorpay code goes here ---
+        # For now, we assume the user clicked "Pay" and it worked.
+        
+        poster.is_active = True  # Activate the poster
+        db.session.commit()
+        
+        flash(f'Payment of ₹{listing_fee} successful! Your poster is now LIVE.', 'success')
+        return redirect(url_for('dashboard'))
+    
+    return render_template('pay_fee.html', poster=poster, fee=listing_fee)
 
 @app.route('/edit-poster/<int:poster_id>', methods=['GET', 'POST'])
 @login_required
@@ -923,6 +708,74 @@ def delete_poster(poster_id):
 # ROUTES - SHOPPING
 # ============================================================================
 
+@app.route('/checkout', methods=['GET', 'POST'])
+@login_required
+def checkout():
+    """Checkout page"""
+    cart_items = CartItem.query.filter_by(user_id=current_user.id).all()
+    
+    if not cart_items:
+        flash('Your cart is empty!', 'warning')
+        return redirect(url_for('view_cart'))
+    
+    if request.method == 'POST':
+        # If form is submitted from checkout page, proceed to place order
+        return redirect(url_for('place_order'))
+    
+    total = sum(item.poster.price * item.quantity for item in cart_items)
+    return render_template('checkout.html', cart_items=cart_items, total=total, user=current_user)
+
+@app.route('/place_order', methods=['GET', 'POST'])
+@login_required
+def place_order():
+    cart_items = CartItem.query.filter_by(user_id=current_user.id).all()
+    
+    if not cart_items:
+        flash('Your cart is empty!')
+        return redirect(url_for('view_cart'))
+
+    # 1. Calculate Total
+    total_amount = sum(item.poster.price * item.quantity for item in cart_items)
+
+    # 2. Generate unique order number
+    import uuid
+    order_number = f"ORD-{uuid.uuid4().hex[:8].upper()}"
+    
+    # 3. Create the Order with shipping details from form
+    new_order = Order(
+        user_id=current_user.id,
+        order_number=order_number,
+        total_amount=total_amount,
+        status='Pending',
+        full_name=request.form.get('full_name', getattr(current_user, 'full_name', None) or ''),
+        phone=request.form.get('phone', getattr(current_user, 'phone', None) or ''),
+        email=request.form.get('email', current_user.email or ''),
+        address=request.form.get('address', ''),
+        city=request.form.get('city', ''),
+        state=request.form.get('state', ''),
+        pincode=request.form.get('pincode', ''),
+        payment_method=request.form.get('payment_method', 'COD')
+    )
+    db.session.add(new_order)
+    db.session.flush()  # This generates the new_order.id before committing
+
+    # 4. SAVE THE ITEMS
+    for item in cart_items:
+        order_item = OrderItem(
+            order_id=new_order.id,
+            poster_id=item.poster.id,
+            quantity=item.quantity
+        )
+        db.session.add(order_item)
+
+    # 5. Clear the User's Cart
+    for item in cart_items:
+        db.session.delete(item)
+
+    db.session.commit()
+    
+    return redirect(url_for('order_confirmation', order_id=new_order.id))   
+
 @app.route('/')
 def index():
     """Homepage"""
@@ -962,6 +815,26 @@ def search():
     ).filter_by(is_active=True).all()
     
     return render_template('search.html', results=results, query=query)
+
+@app.route('/contact', methods=['GET', 'POST'])
+def contact():
+    """Contact Us Page"""
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip()
+        subject = request.form.get('subject', '').strip()
+        message = request.form.get('message', '').strip()
+        
+        if not name or not email or not subject or not message:
+            flash('Please fill in all fields.', 'error')
+            return redirect(url_for('contact'))
+        
+        # Here you would typically add logic to send an email
+        # For now, we simulate success
+        flash(f'Thanks {name}! We have received your message regarding "{subject}". We will get back to you soon.', 'success')
+        return redirect(url_for('contact'))
+        
+    return render_template('contact.html')
 
 @app.route('/add-to-cart/<int:poster_id>', methods=['POST'])
 @login_required
@@ -1045,7 +918,10 @@ def my_orders():
     """View user's orders"""
     orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
     return render_template('my_orders.html', orders=orders)
-
+@app.route('/about')
+def about():
+    """About Us Page"""
+    return render_template('about.html')
 # ============================================================================
 # UTILITY ROUTES
 # ============================================================================

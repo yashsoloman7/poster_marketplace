@@ -1,66 +1,423 @@
 {% extends "base.html" %}
 
-{% block title %}Add Poster - Poster Marketplace{% endblock %}
+{% block title %}Upload Art - Poster Marketplace{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+    /* ========== PAGE BACKGROUND & LAYOUT ========== */
+    .add-poster-section {
+        min-height: 90vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%); /* Modern Blue-Purple Gradient */
+        padding: 40px 20px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Decorative floating shapes in background */
+    .shape {
+        position: absolute;
+        filter: blur(50px);
+        z-index: 0;
+        animation: float 6s infinite ease-in-out;
+    }
+    .shape-1 {
+        top: -10%;
+        left: -10%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 107, 107, 0.4);
+        border-radius: 50%;
+    }
+    .shape-2 {
+        bottom: -10%;
+        right: -5%;
+        width: 350px;
+        height: 350px;
+        background: rgba(78, 205, 196, 0.4);
+        border-radius: 50%;
+        animation-delay: 1s;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-20px) scale(1.05); }
+    }
+
+    /* ========== MAIN CARD ========== */
+    .form-container {
+        width: 100%;
+        max-width: 900px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        padding: 0;
+        z-index: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .form-header-bg {
+        background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
+        padding: 40px;
+        text-align: center;
+        color: white;
+    }
+
+    .form-header-bg h1 {
+        margin: 0;
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+    }
+    
+    .form-header-bg p {
+        margin-top: 10px;
+        opacity: 0.8;
+        font-size: 1.1rem;
+    }
+
+    .form-body {
+        padding: 40px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+    }
+
+    /* ========== FORM INPUTS ========== */
+    .form-group {
+        margin-bottom: 25px;
+        position: relative;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 700;
+        color: #2d3436;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .input-wrapper {
+        position: relative;
+    }
+
+    .input-icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #b2bec3;
+        transition: color 0.3s;
+    }
+
+    .form-input, .form-select, .form-textarea {
+        width: 100%;
+        padding: 14px 15px 14px 45px; /* Space for icon */
+        border: 2px solid #dfe6e9;
+        border-radius: 12px;
+        font-size: 15px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #fdfdfd;
+        color: #2d3436;
+        font-family: inherit;
+    }
+
+    .form-textarea {
+        padding-left: 15px; /* No icon for textarea usually */
+        resize: none;
+    }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+        border-color: #4b6cb7;
+        box-shadow: 0 0 0 4px rgba(75, 108, 183, 0.1);
+        background: white;
+        outline: none;
+    }
+
+    .form-input:focus + .input-icon {
+        color: #4b6cb7;
+    }
+
+    /* ========== IMAGE UPLOAD AREA ========== */
+    .upload-column {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .file-upload-wrapper {
+        flex-grow: 1;
+        border: 3px dashed #dfe6e9;
+        border-radius: 16px;
+        background: #f8f9fa;
+        position: relative;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        min-height: 300px;
+        overflow: hidden;
+    }
+
+    .file-upload-wrapper:hover {
+        border-color: #4b6cb7;
+        background: #f1f4fb;
+    }
+
+    .file-upload-wrapper input[type="file"] {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        z-index: 10;
+    }
+
+    .upload-content {
+        text-align: center;
+        padding: 20px;
+        transition: opacity 0.3s;
+    }
+
+    .upload-icon-large {
+        font-size: 4rem;
+        color: #4b6cb7;
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    .upload-text-main {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #2d3436;
+        margin-bottom: 5px;
+    }
+
+    .upload-text-sub {
+        color: #636e72;
+        font-size: 0.9rem;
+    }
+
+    /* Image Preview Styling */
+    #imagePreview {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: none;
+        z-index: 5;
+    }
+
+    .remove-image-btn {
+        position: absolute;
+        bottom: 15px;
+        right: 15px;
+        background: rgba(255, 255, 255, 0.9);
+        color: #d63031;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-weight: 700;
+        cursor: pointer;
+        z-index: 15;
+        display: none;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+
+    .remove-image-btn:hover {
+        transform: scale(1.05);
+    }
+
+    /* ========== BUTTONS ========== */
+    .form-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-custom {
+        padding: 12px 28px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: none;
+    }
+
+    .btn-cancel {
+        background: transparent;
+        color: #636e72;
+        border: 2px solid #dfe6e9;
+    }
+
+    .btn-cancel:hover {
+        border-color: #b2bec3;
+        color: #2d3436;
+        background: #f5f6fa;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+        color: white;
+        box-shadow: 0 4px 15px rgba(75, 108, 183, 0.3);
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(75, 108, 183, 0.4);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .form-body {
+            grid-template-columns: 1fr;
+        }
+        .file-upload-wrapper {
+            min-height: 250px;
+        }
+    }
+</style>
+
 <section class="add-poster-section">
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+
     <div class="container">
         <div class="form-container">
-            <div class="form-header">
-                <h1>Add New Poster</h1>
-                <p>Upload your amazing artwork to share with the community</p>
+            <div class="form-header-bg">
+                <h1>Showcase Your Art</h1>
+                <p>Add a new poster to your collection and start selling today.</p>
             </div>
-            <form method="POST" enctype="multipart/form-data" class="poster-form">
-                <div class="form-group">
-                    <label for="title">Poster Title</label>
-                    <input type="text" id="title" name="title" required class="form-input">
-                    <small class="form-help">Give your poster a catchy, descriptive title</small>
-                </div>
+            
+            <form method="POST" enctype="multipart/form-data" class="form-body">
                 
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea id="description" name="description" required class="form-textarea" rows="4"></textarea>
-                    <small class="form-help">Describe what makes this poster special</small>
-                </div>
-                
-                <div class="form-row">
+                <div class="text-inputs-column">
                     <div class="form-group">
-                        <label for="price">Price (₹)</label>
-                        <input type="number" id="price" name="price" step="0.01" min="0" required class="form-input">
-                        <small class="form-help">Set a competitive price</small>
+                        <label for="title" class="form-label">Poster Title</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-heading input-icon"></i>
+                            <input type="text" id="title" name="title" placeholder="e.g. Neon Cyberpunk City" required class="form-input">
+                        </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="category">Category</label>
-                        <select id="category" name="category" required class="form-select">
-                            <option value="">Select Category</option>
-                            <option value="Anime">Anime</option>
-                            <option value="Gaming">Gaming</option>
-                        </select>
-                        <small class="form-help">Choose the best category</small>
+                        <label for="category" class="form-label">Category</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-tag input-icon"></i>
+                            <select id="category" name="category" required class="form-select">
+                                <option value="" disabled selected>Select a category...</option>
+                                <option value="Anime">Anime</option>
+                                <option value="Gaming">Gaming</option>
+                                <option value="Movies">Movies</option>
+                                <option value="Abstract">Abstract</option>
+                                <option value="Nature">Nature</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="price" class="form-label">Price (₹)</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-rupee-sign input-icon"></i>
+                            <input type="number" id="price" name="price" step="0.01" min="0" placeholder="0.00" required class="form-input">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea id="description" name="description" placeholder="Tell the story behind this artwork..." required class="form-textarea" rows="4"></textarea>
                     </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="image">Poster Image</label>
-                    <div class="file-upload-area">
-                        <input type="file" id="image" name="image" accept="image/*" required class="form-file">
-                        <div class="file-upload-text">
-                            <span class="upload-icon">📁</span>
-                            <span>Click to upload or drag and drop</span>
-                            <small>PNG, JPG, JPEG, GIF up to 10MB</small>
+
+                <div class="upload-column">
+                    <label class="form-label">Artwork File</label>
+                    <div class="file-upload-wrapper" id="dropZone">
+                        <input type="file" id="image" name="image" accept="image/*" required onchange="previewImage(this)">
+                        
+                        <div class="upload-content" id="uploadContent">
+                            <i class="fas fa-cloud-upload-alt upload-icon-large"></i>
+                            <div class="upload-text-main">Click or Drag & Drop</div>
+                            <div class="upload-text-sub">JPG, PNG or GIF (Max 10MB)</div>
                         </div>
+
+                        <img id="imagePreview" alt="Preview">
+                        <button type="button" class="remove-image-btn" id="removeBtn" onclick="removeImage()">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
                     </div>
                 </div>
                 
                 <div class="form-actions">
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Cancel</a>
-                    <button type="submit" class="btn btn-primary">
-                        <span>🚀</span> Upload Poster
+                    <a href="{{ url_for('dashboard') }}" class="btn-custom btn-cancel">Cancel</a>
+                    <button type="submit" class="btn-custom btn-submit">
+                        <i class="fas fa-rocket"></i> Publish Poster
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </section>
+
+<script>
+    function previewImage(input) {
+        const preview = document.getElementById('imagePreview');
+        const content = document.getElementById('uploadContent');
+        const removeBtn = document.getElementById('removeBtn');
+        const wrapper = document.getElementById('dropZone');
+
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                content.style.opacity = '0';
+                removeBtn.style.display = 'block';
+                wrapper.style.borderStyle = 'solid';
+                wrapper.style.borderColor = '#4b6cb7';
+            }
+            
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function removeImage() {
+        const input = document.getElementById('image');
+        const preview = document.getElementById('imagePreview');
+        const content = document.getElementById('uploadContent');
+        const removeBtn = document.getElementById('removeBtn');
+        const wrapper = document.getElementById('dropZone');
+
+        input.value = ''; // Clear input
+        preview.style.display = 'none';
+        preview.src = '';
+        content.style.opacity = '1';
+        removeBtn.style.display = 'none';
+        wrapper.style.borderStyle = 'dashed';
+        wrapper.style.borderColor = '#dfe6e9';
+    }
+</script>
 {% endblock %}

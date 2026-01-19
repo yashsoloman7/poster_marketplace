@@ -71,6 +71,41 @@
             opacity: 0.8;
         }
 
+        .search-bar {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .search-bar input {
+            padding: 0.6rem 1rem;
+            border: none;
+            border-radius: 20px;
+            width: 200px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: width 0.3s;
+        }
+
+        .search-bar input:focus {
+            width: 250px;
+        }
+
+        .search-bar button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid white;
+            color: white;
+            padding: 0.6rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+
+        .search-bar button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
         .nav-right {
             display: flex;
             gap: 1rem;
@@ -88,7 +123,10 @@
 
         /* ========== HERO SECTION ========== */
         .hero {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%), url('{{ url_for("static", filename="poster_homepage.png") }}');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
             color: white;
             padding: 80px 20px;
             text-align: center;
@@ -103,17 +141,17 @@
         .hero::before {
             content: '';
             position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 400px;
-            height: 400px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 0;
         }
 
         .hero-content {
             position: relative;
-            z-index: 1;
+            z-index: 2;
             max-width: 800px;
         }
 
@@ -507,6 +545,12 @@
                 <li><a href="{{ url_for('anime_page') }}">Anime</a></li>
                 <li><a href="{{ url_for('gaming_page') }}">Gaming</a></li>
                 <li><a href="#featured">Browse All</a></li>
+                <li>
+                    <form class="search-bar" method="GET" action="{{ url_for('search') }}">
+                        <input type="text" name="q" placeholder="Search posters..." required>
+                        <button type="submit">🔍</button>
+                    </form>
+                </li>
             </ul>
             <div class="nav-right">
                 {% if current_user.is_authenticated %}

@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Poster - Poster Marketplace{% endblock %}
+
+{% block content %}
+<style>
+    /* ========== PAGE BACKGROUND & LAYOUT ========== */
+    .edit-poster-section {
+        min-height: 90vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 40px 20px;
+    }
+
+    /* ========== MAIN CARD ========== */
+    .edit-poster-container {
+        width: 100%;
+        max-width: 800px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .edit-poster-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px;
+        text-align: center;
+        color: white;
+    }
+
+    .edit-poster-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 10px;
+    }
+
+    .edit-poster-header p {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 1rem;
+    }
+
+    .edit-poster-body {
+        padding: 40px;
+    }
+
+    /* ========== FORM GROUPS ========== */
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #2d3436;
+        margin-bottom: 8px;
+        font-size: 15px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #dfe6e9;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 15px;
+        transition: all 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 120px;
+    }
+
+    .form-group small {
+        display: block;
+        margin-top: 5px;
+        color: #636e72;
+        font-size: 13px;
+    }
+
+    /* ========== POSTER PREVIEW ========== */
+    .poster-preview {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+
+    .poster-preview-image {
+        width: 120px;
+        height: 150px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 48px;
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    .poster-preview-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .poster-preview-info {
+        color: white;
+        flex: 1;
+    }
+
+    .poster-preview-info h3 {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .poster-preview-info p {
+        margin: 5px 0;
+        font-size: 14px;
+        opacity: 0.9;
+    }
+
+    .preview-price {
+        font-size: 20px;
+        font-weight: 800;
+        margin-top: 10px;
+    }
+
+    /* ========== FORM ACTIONS ========== */
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+
+    .btn-save {
+        flex: 1;
+        padding: 13px 25px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-save:active {
+        transform: translateY(0);
+    }
+
+    .btn-cancel {
+        flex: 1;
+        padding: 13px 25px;
+        background: #f5f7fa;
+        color: #667eea;
+        border: 2px solid #667eea;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-cancel:hover {
+        background: #667eea;
+        color: white;
+    }
+
+    .form-hint {
+        background: #f0f0f0;
+        border-left: 4px solid #667eea;
+        padding: 12px 15px;
+        border-radius: 4px;
+        font-size: 13px;
+        color: #636e72;
+        margin-bottom: 25px;
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+        .edit-poster-section {
+            padding: 20px;
+        }
+
+        .edit-poster-body {
+            padding: 25px;
+        }
+
+        .edit-poster-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .poster-preview {
+            flex-direction: column;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn-save, .btn-cancel {
+            width: 100%;
+        }
+    }
+</style>
+
+<section class="edit-poster-section">
+    <div class="edit-poster-container">
+        <div class="edit-poster-header">
+            <h1>✏️ Edit Your Poster</h1>
+            <p>Update your poster details and pricing</p>
+        </div>
+
+        <div class="edit-poster-body">
+            <!-- Current Poster Preview -->
+            <div class="poster-preview">
+                <div class="poster-preview-image">
+                    {% if poster.image_filename %}
+                        <img src="{{ url_for('serve_upload', filename=poster.image_filename) }}" alt="{{ poster.title }}">
+                    {% else %}
+                        📌
+                    {% endif %}
+                </div>
+                <div class="poster-preview-info">
+                    <h3>Current Poster</h3>
+                    <p><strong>{{ poster.title }}</strong></p>
+                    <p>Category: {{ poster.category }}</p>
+                    <p class="preview-price">₹{{ "%.0f"|format(poster.price) }}</p>
+                </div>
+            </div>
+
+            <!-- Edit Form -->
+            <form method="POST" class="edit-form">
+                <div class="form-hint">
+                    💡 Update your poster information below. Changes will be saved immediately.
+                </div>
+
+                <div class="form-group">
+                    <label for="title">Poster Title *</label>
+                    <input type="text" id="title" name="title" value="{{ poster.title }}" required 
+                           placeholder="Enter poster title" maxlength="100">
+                    <small>Maximum 100 characters</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description *</label>
+                    <textarea id="description" name="description" required 
+                              placeholder="Describe your poster in detail...">{{ poster.description }}</textarea>
+                    <small>Provide a detailed description to attract buyers</small>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label for="price">Price (₹) *</label>
+                        <input type="number" id="price" name="price" value="{{ poster.price }}" required 
+                               min="1" step="0.01" placeholder="Enter price">
+                        <small>In Indian Rupees</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">Category *</label>
+                        <select id="category" name="category" required>
+                            <option value="">Select Category</option>
+                            <option value="Anime" {% if poster.category == 'Anime' %}selected{% endif %}>Anime</option>
+                            <option value="Gaming" {% if poster.category == 'Gaming' %}selected{% endif %}>Gaming</option>
+                            <option value="Art" {% if poster.category == 'Art' %}selected{% endif %}>Art</option>
+                            <option value="Movies" {% if poster.category == 'Movies' %}selected{% endif %}>Movies</option>
+                            <option value="Sports" {% if poster.category == 'Sports' %}selected{% endif %}>Sports</option>
+                            <option value="Music" {% if poster.category == 'Music' %}selected{% endif %}>Music</option>
+                            <option value="Motivational" {% if poster.category == 'Motivational' %}selected{% endif %}>Motivational</option>
+                            <option value="Other" {% if poster.category == 'Other' %}selected{% endif %}>Other</option>
+                        </select>
+                        <small>Choose the most relevant category</small>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-save">💾 Save Changes</button>
+                    <a href="{{ url_for('dashboard') }}" class="btn-cancel">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

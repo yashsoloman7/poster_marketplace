@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Pay Listing Fee - Poster Marketplace{% endblock %}
+
+{% block content %}
+<style>
+    .payment-container {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        padding: 20px;
+    }
+    
+    .payment-card {
+        background: white;
+        width: 100%;
+        max-width: 500px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+
+    .payment-header {
+        background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .payment-body {
+        padding: 40px;
+    }
+
+    .fee-breakdown {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .breakdown-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        color: #636e72;
+        font-size: 15px;
+    }
+
+    .breakdown-row.total {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 2px dashed #dfe6e9;
+        color: #2d3436;
+        font-weight: 800;
+        font-size: 20px;
+        margin-bottom: 0;
+    }
+
+    .pay-btn {
+        width: 100%;
+        background: #00b894;
+        color: white;
+        border: none;
+        padding: 16px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 18px;
+        cursor: pointer;
+        transition: transform 0.2s, background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .pay-btn:hover {
+        background: #00a884;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="payment-container">
+    <div class="payment-card">
+        <div class="payment-header">
+            <i class="fas fa-wallet fa-3x mb-3"></i>
+            <h2>Complete Listing</h2>
+            <p class="mb-0">One final step to publish your art</p>
+        </div>
+
+        <div class="payment-body">
+            <div class="text-center mb-4">
+                <h4 style="color: #2d3436;">{{ poster.title }}</h4>
+                <p class="text-muted small">Category: {{ poster.category }}</p>
+            </div>
+
+            <div class="fee-breakdown">
+                <div class="breakdown-row">
+                    <span>Poster Price</span>
+                    <span>₹{{ "%.2f"|format(poster.price) }}</span>
+                </div>
+                <div class="breakdown-row">
+                    <span>Platform Fee (10%)</span>
+                    <span>₹{{ "%.2f"|format(fee) }}</span>
+                </div>
+                <div class="breakdown-row total">
+                    <span>Total To Pay</span>
+                    <span style="color: #6c5ce7;">₹{{ "%.2f"|format(fee) }}</span>
+                </div>
+            </div>
+
+            <form method="POST">
+                <button type="submit" class="pay-btn">
+                    <i class="fas fa-lock"></i> Pay Securely
+                </button>
+            </form>
+            
+            <div class="text-center mt-3">
+                <small class="text-muted"><i class="fas fa-shield-alt"></i> Payments are simulated for demo</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

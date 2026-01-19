@@ -1,4 +1,3 @@
-<!-- dashboard.html - Fixed User Dashboard -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -8,20 +7,12 @@
         <p>Here's your dashboard overview</p>
     </div>
 
-    <!-- User Stats Cards -->
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-icon">📊</div>
             <div class="stat-content">
                 <h3>Total Posters</h3>
                 <p class="stat-number">{{ stats.total_posters }}</p>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">💰</div>
-            <div class="stat-content">
-                <h3>Total Sales</h3>
-                <p class="stat-number">₹{{ "%.2f"|format(stats.total_sales) }}</p>
             </div>
         </div>
         <div class="stat-card">
@@ -33,7 +24,6 @@
         </div>
     </div>
 
-    <!-- Quick Actions -->
     <div class="dashboard-section">
         <h2>Quick Actions</h2>
         <div class="action-buttons">
@@ -48,7 +38,6 @@
         </div>
     </div>
 
-    <!-- Recent Orders Section -->
     <div class="dashboard-section">
         <h2>Recent Orders</h2>
         {% if stats.recent_orders %}
@@ -87,7 +76,6 @@
         {% endif %}
     </div>
 
-    <!-- Your Posters Section -->
     <div class="dashboard-section">
         <h2>Your Posters</h2>
         {% if stats.user_posters %}
