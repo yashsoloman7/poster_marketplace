@@ -1,6 +1,5 @@
-# app.py - Enhanced Poster Marketplace with ALL Routes
-# FIXED VERSION - Includes anime_page, gaming_page, and all category routes
 
+#Poster_Marketplace application develop by YASH SOLOAMN
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, make_response, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
